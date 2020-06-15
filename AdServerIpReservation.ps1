@@ -44,7 +44,7 @@ foreach ($Server in $Servers) {
     $NIC = Get-WmiObject win32_networkadapterconfiguration -ComputerName $Server.name | Where-Object { $_.DNSDomain -eq $DnsSuffix.Value }
     if ($null -ne $NIC) {
         $Mac = $NIC.MACAddress
-        Add-DhcpServerv4Reservation -ScopeId $ScopeId -IPAddress $IpAddress -ClientId $Mac.Replace(":", "-") -Description "Reservation for Server $Server"
+        Add-DhcpServerv4Reservation -ScopeId $ScopeId -IPAddress $IpAddress -ClientId $Mac.Replace(":", "-") -Description "Reservation for Server" $Server
         Write-Host "New Reservation created:" $Server.name $IpAddress
     }
 }
