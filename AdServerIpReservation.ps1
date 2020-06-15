@@ -49,5 +49,3 @@ foreach ($Server in $Servers) {
         Write-Host "New Reservation created:" $Server.name $IpAddress
     }
 }
-
-# Ad Computer prps: DNSHostName, Enabled , Name  ,  IPv4Address 
