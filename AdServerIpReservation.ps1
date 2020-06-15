@@ -5,7 +5,7 @@ if ($null -eq $DhcpExcludedScope) {
     Write-Host "This is your current DHCP-Range:" $DhcpScope
 
     $continue = Read-Host "Would you like to configure an excluded Range now? `n(Yes, Y to continue or No, N to cancle)"
-    if (($continue.ToLower -eq "y") -or ($continue.ToLower -eq "yes")) {
+    if (($continue -eq "y") -or ($continue -eq "yes")) {
         Write-Host "Please enter the start IP-Address of your new DHCP excluded Range"
         $StartRange = Read-Host
         Write-Host "Please enter the end IP-Address of your new DHCP excluded Range"
@@ -21,7 +21,7 @@ if ($null -eq $DhcpExcludedScope) {
 
     }
 
-    if (($continue.ToLower -eq "n") -or ($continue.ToLower -eq "no")) {
+    if (($continue -eq "n") -or ($continue -eq "no")) {
         exit
     }
 }
