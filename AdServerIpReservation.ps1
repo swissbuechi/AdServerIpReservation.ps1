@@ -1,4 +1,4 @@
-    if (Get-DhcpServerv4ExclusionRange -eq null) {
+    if (Get-DhcpServerv4ExclusionRange -eq $null) {
         Write-Host "There is currently no IPv4 DHCP excluded range configured"
         $DhcpScope = Get-DhcpServerv4Scope
         Write-Host "This is your current DHCP-Range:" $DhcpScope
