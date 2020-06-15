@@ -40,7 +40,7 @@ else {
 }
 
 foreach ($Server in $Servers) {
-    $IpAddress = "172.16.1.30" # How can I decide wich IP in the Excluded Scope i should pick...
+    $IpAddress = "172.16.1.30" # How can I decide wich IP in the Excluded Scope i should pick...???
     # Firewall Rule for Remote Wmi-Object: netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes
     $NIC = Get-WmiObject win32_networkadapterconfiguration -ComputerName $Server.name | Where-Object { $_.DNSDomain -eq $DnsSuffix.Value }
     if ($null -ne $NIC) {
