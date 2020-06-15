@@ -1,5 +1,5 @@
 $DhcpScopes = Get-DhcpServerv4Scope
-$Servers = Get-ADComputer -Filter {OperatingSystem -like "*windows*server*"} | Select-Object -Property name
+$Servers = Get-ADComputer -Filter { OperatingSystem -like "*windows*server*" } | Select-Object -Property name
 $DhcpExcludedScope = Get-DhcpServerv4ExclusionRange
 $DhcpScopesCount = $DhcpScopes | Measure-Object
 
@@ -18,13 +18,15 @@ if ($null -eq $DhcpExcludedScope) {
     if (($continue -eq "y") -or ($continue -eq "yes")) {
         if ($DhcpScopesCount.Count -eq 1) {
             $ScopeId = $DhcpScopes.ScopeId.IPAddressToString
-        } else {
+        }
+        else {
             $ScopeId = Read-Host "Scope Id"
         }
         $StartRange = Read-Host "Start IP"
         $EndRange = Read-Host "End IP"
         Add-DhcpServerv4ExclusionRange -ScopeId $ScopeId -StartRange $StartRange -EndRange $EndRange
-    } else {
+    }
+    else {
         exit
     }
 }
@@ -33,13 +35,19 @@ if ($DhcpScopesCount.Count -eq 1) {
     $ScopeId = $DhcpScopes.ScopeId.IPAddressToString
     $DnsSuffix = Get-DhcpServerv4OptionValue -ScopeId $ScopeId -OptionId 15
 }
-
-foreach ($Server in $Servers) {
-    $Server.name
-    # Firewall Rule for Remote Wmi-Object: netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes
-    $NIC = Get-WmiObject win32_networkadapterconfiguration -ComputerName $Server.name | Where-Object{$_.DNSDomain -eq $DnsSuffix.Value}
-    $Mac = $NIC.MACAddress 
-    $Mac
+else {
+    # Figure out which scope to use... ??? :-(
 }
 
-# prps: DNSHostName, Enabled , Name  ,  IPv4Address 
+foreach ($Server in $Servers) {
+    $IpAddress = "172.16.1.30" # How can I decide wich IP in the Excluded Scope i should pick...
+    # Firewall Rule for Remote Wmi-Object: netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes
+    $NIC = Get-WmiObject win32_networkadapterconfiguration -ComputerName $Server.name | Where-Object { $_.DNSDomain -eq $DnsSuffix.Value }
+    if ($null -ne $NIC) {
+        $Mac = $NIC.MACAddress
+        Add-DhcpServerv4Reservation -ScopeId $ScopeId -IPAddress $IpAddress -ClientId $Mac.Replace(":", "-") -Description "Reservation for Server $Server"
+        Write-Host "New Reservation created:" $Server.name $IpAddress
+    }
+}
+
+# Ad Computer prps: DNSHostName, Enabled , Name  ,  IPv4Address 
