@@ -1,28 +1,23 @@
 $DhcpExcludedScope = Get-DhcpServerv4ExclusionRange
 if ($null -eq $DhcpExcludedScope) {
     Write-Host "There is currently no IPv4 DHCP excluded range configured"
-    $DhcpScope = Get-DhcpServerv4Scope
-    Write-Host "This is your current DHCP-Range:" $DhcpScope
+    $DhcpScopes = Get-DhcpServerv4Scope
+    Write-Host "This is your current DHCP-Range:"
+    $DhcpScopes
 
-    $continue = Read-Host "Would you like to configure an excluded Range now? `n(Yes, Y to continue or No, N to cancle)"
+    $continue = Read-Host "Would you like to configure an excluded Range now? `n(yes, y to continue or no, n to cancle)"
     if (($continue -eq "y") -or ($continue -eq "yes")) {
-        Write-Host "Please enter the start IP-Address of your new DHCP excluded Range"
-        $StartRange = Read-Host
-        Write-Host "Please enter the end IP-Address of your new DHCP excluded Range"
-        $EndRange = Read-Host
-
+        $ScopeId = Read-Host "Scope Id: "
+        $StartRange = Read-Host "Start IP-Address: "
+        $EndRange = Read-Host "End IP-Address: "
         try {
-            Add-DhcpServerv4ExclusionRange -StartRange $StartRange -EndRange $EndRange
+            Add-DhcpServerv4ExclusionRange -ScopeId $ScopeId -StartRange $StartRange -EndRange $EndRange
         }
         catch {
             Write-Host "Could not create your new DCHP excluded Range: start $StartRange end: $EndRange"
-            Write-Host "Please check if your start and end IP-Address is inside your DHCP Scope: $DhcpScope"
+            Write-Host "Please check if your start and end IP-Address is inside your DHCP Scope:"
+            $DhcpScopes
         }
-
-    }
-
-    if (($continue -eq "n") -or ($continue -eq "no")) {
-        exit
     }
 }
 
