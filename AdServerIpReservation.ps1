@@ -34,6 +34,7 @@ $ipAddress = $dhcpExcludedScope.StartRange--
 
 foreach ($server in $servers) {
     $ipAddress = IsIpAddressUsed -ipAddress $ipAddress++ 
+    # foreach ($NIC in $NICs) {$NIC.EnableStatic("10.0.0.$(($ipaddress++))", "255.255.255.0")
     # Firewall Rule for Remote Wmi-Object: netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes
     $nic = Get-WmiObject win32_networkadapterconfiguration -ComputerName $server.name | Where-Object { $_.DNSDomain -eq $DnsSuffix.Value }
     if ($null -ne $nic) {
