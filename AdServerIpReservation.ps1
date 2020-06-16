@@ -33,7 +33,7 @@ if ($dhcpExcludedScopeCount.Count -eq 1) {
 $ipAddress = $dhcpExcludedScope.StartRange--
 
 foreach ($server in $servers) {
-    $ipAddress = IsIpAddressUsed($ipAddress++)
+    $ipAddress = IsIpAddressUsed -ipAddress $ipAddress++ 
     # Firewall Rule for Remote Wmi-Object: netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes
     $nic = Get-WmiObject win32_networkadapterconfiguration -ComputerName $server.name | Where-Object { $_.DNSDomain -eq $DnsSuffix.Value }
     if ($null -ne $nic) {
@@ -59,6 +59,8 @@ function IsIpAddressUsed {
         } return $ipAddress
     }
 }
+
+IsIpAddressInRange -ipAddress 172.16.1.36 -fromAddress 172.16.1.30 -toAddress 172.16.1.40
 
 function IsIpAddressInRange {
     param(
