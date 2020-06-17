@@ -1,5 +1,4 @@
 
-$boolean = !(Test-Connection -TargetName $ipAddress -Count 1 -Quiet)
 function IsIpAddressUsed {
     # Firewall Rule for allow Ping: netsh advFirewall Firewall add rule name="OSRadar Rule PING IPv4" protocol=icmpv4:8,any dir=in action=allow 
     param (
@@ -13,7 +12,7 @@ function IsIpAddressUsed {
             $ip = $ipAddress.GetAddressBytes()
             $ip[3]++
             $ipAddress = [system.net.ipaddress] "$($ip[0]).$($ip[1]).$($ip[2]).$($ip[3])"
-            if (!(Test-Connection -TargetName $ipAddress -Count 1 -Quiet)) {
+            if (!(Test-Connection -ComputerName $ipAddress -Count 1 -Quiet)) {
                 return $ipAddress
             }
         } 
@@ -45,12 +44,6 @@ function AddDhcpExcludedRange {
     $dhcpScopes
     $continue = Read-Host "`nWould you like to configure an excluded Range now? `n(yes, y to continue or no, n to cancle)"
     if (($continue -eq "y") -or ($continue -eq "yes")) {
-        if ($dhcpScopesCount.Count -eq 1) {
-            [system.net.ipaddress] $dhcpScopeId = $dhcpScopes.ScopeId.IPAddressToString
-        }
-        else {
-            [system.net.ipaddress] $dhcpScopeId = Read-Host "Scope Id"
-        }
         [system.net.ipaddress] $StartRange = Read-Host "Start IP"
         [system.net.ipaddress] $EndRange = Read-Host "End IP"
         Add-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId -StartRange $StartRange -EndRange $EndRange
@@ -61,9 +54,6 @@ function AddDhcpExcludedRange {
 }
 
 $dhcpScopes = Get-DhcpServerv4Scope
-$dhcpScopesCount = $dhcpScopes | Measure-Object
-$dhcpExcludedScope = Get-DhcpServerv4ExclusionRange
-$dhcpExcludedScopeCount = $dhcpExcludedScope | Measure-Object
 
 if ($null -eq $dhcpScopes) {
     Write-Host "No DHCP-Scope configured"
@@ -71,30 +61,38 @@ if ($null -eq $dhcpScopes) {
     exit
 }
 
-Write-Host "This is your current DHCP excluded Scope:`n"
-$dhcpExcludedScope
-
-if ($null -eq $dhcpExcludedScope) {
-    AddDhcpExcludedRange
-}
-
-$dhcpExcludedScope = Get-DhcpServerv4ExclusionRange
-$dhcpExcludedScopeCount = $dhcpExcludedScope | Measure-Object
+$dhcpScopesCount = $dhcpScopes | Measure-Object
 
 if ($dhcpScopesCount.Count -eq 1) {
     [system.net.ipaddress] $dhcpScopeId = $dhcpScopes.ScopeId.IPAddressToString
 }
 else {
-    [system.net.ipaddress] $dhcpScopeId = Read-Host "Please Enter the ScopeId of your DHCP Excluded Range you want to use"
+    $dhcpScopes
+    [system.net.ipaddress] $dhcpScopeId = Read-Host "`nPlease Enter the ScopeId of your DHCP-Scope you want to use"
 }
-
 $dnsSuffix = Get-DhcpServerv4OptionValue -ScopeId $dhcpScopeId -OptionId 15
 
-if ($dhcpExcludedScopeCount.Count -eq 1) {
-    $dhcpExcludedScopeId = $dhcpExcludedScope.ScopeId
+$dhcpExcludedScopes = Get-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId  | Format-Table
+$dhcpExcludedScopeCount = $dhcpExcludedScopes | Measure-Object
+
+if ($null -eq $dhcpExcludedScopes) {
+    AddDhcpExcludedRange
 }
 
-$ipAddress = $dhcpExcludedScope.StartRange
+$dhcpExcludedScopes = Get-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId | Format-Table
+$dhcpExcludedScopeCount = $dhcpExcludedScopes | Measure-Object
+
+if ($dhcpExcludedScopeCount.Count -eq 1) {
+    Write-Host "This is your current DHCP excluded Scope:`n"
+    $dhcpExcludedScopes
+    $ipAddress = $dhcpExcludedScopes.StartRange
+}
+else {
+    Write-Host "These are your current DHCP excluded Scopes:`n"
+    $dhcpExcludedScopes
+    [system.net.ipaddress] $ipAddress = Read-Host "`nPlease Enter the StartRange of your DHCP Excluded Scope you want to use"
+    $dhcpExcludedScopes = Get-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId | Where-Object {$_.StartRange -eq $ipAddress}
+}
 
 $ip = $ipAddress.GetAddressBytes()
 $ip[3]--
@@ -102,21 +100,21 @@ $ipAddress = [system.net.ipaddress] "$($ip[0]).$($ip[1]).$($ip[2]).$($ip[3])"
 
 $servers = Get-ADComputer -Filter { OperatingSystem -like "*windows*server*" } | Select-Object -Property name
 foreach ($server in $servers) {
-    $ipAddress = IsIpAddressUsed -ipAddress $ipAddress
     # Firewall Rule for Remote Wmi-Object: netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes
     $nics = Get-WmiObject win32_networkadapterconfiguration -ComputerName $server.name | Where-Object { $_.DNSDomain -eq $dnsSuffix.Value }
     foreach ($nic in $nics) {
         $ip = $ipAddress.GetAddressBytes()
         $ip[3]++
         $ipAddress = [system.net.ipaddress] "$($ip[0]).$($ip[1]).$($ip[2]).$($ip[3])"
-        if (!(IsIpAddressInRange -ipAddress $ipAddress -fromAddress $dhcpExcludedScope.StartRange -toAddress $dhcpExcludedScope.EndRange)) {
+        $ipAddress = IsIpAddressUsed -ipAddress $ipAddress
+        if (!(IsIpAddressInRange -ipAddress $ipAddress -fromAddress $dhcpExcludedScopes.StartRange -toAddress $dhcpExcludedScopes.EndRange)) {
             Write-Host "Your DHCP Excluded Range is full"
             Write-Host "Please extend your DHCP Excluded Range and re-run the script"
             exit
         }
         if ($null -ne $nic) {
             $mac = $nic.MACAddress
-            Add-DhcpServerv4Reservation -ScopeId $dhcpExcludedScopeId -IPAddress $ipAddress -ClientId $mac.Replace(":", "-") -Description "Reservation for server $($server.name)"
+            Add-DhcpServerv4Reservation -ScopeId $DhcpScopeId -IPAddress $ipAddress -ClientId $mac.Replace(":", "-") -Description "Reservation for server $($server.name)"
             Write-Host "`nNew Reservation created:" $server.name $ipAddress
         }
     }
