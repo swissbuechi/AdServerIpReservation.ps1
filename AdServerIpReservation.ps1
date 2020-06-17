@@ -37,10 +37,10 @@ function IsIpAddressInRange {
     $from -le $ip -and $ip -le $to
 }
 
-
 function AddDhcpExcludedRange {
     Write-Host "There is currently no IPv4 DHCP excluded range configured`n"
     Write-Host "This is your current DHCP-Range:`n"
+    $dhcpScopes = Get-DhcpServerv4Scope -ScopeId $dhcpScopeId
     $dhcpScopes
     $continue = Read-Host "`nWould you like to configure an excluded Range now? `n(yes, y to continue or no, n to cancle)"
     if (($continue -eq "y") -or ($continue -eq "yes")) {
@@ -72,26 +72,26 @@ else {
 }
 $dnsSuffix = Get-DhcpServerv4OptionValue -ScopeId $dhcpScopeId -OptionId 15
 
-$dhcpExcludedScopes = Get-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId  | Format-Table
+$dhcpExcludedScopes = Get-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId
 $dhcpExcludedScopeCount = $dhcpExcludedScopes | Measure-Object
 
 if ($null -eq $dhcpExcludedScopes) {
     AddDhcpExcludedRange
 }
 
-$dhcpExcludedScopes = Get-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId | Format-Table
+$dhcpExcludedScopes = Get-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId
 $dhcpExcludedScopeCount = $dhcpExcludedScopes | Measure-Object
 
 if ($dhcpExcludedScopeCount.Count -eq 1) {
     Write-Host "This is your current DHCP excluded Scope:`n"
-    $dhcpExcludedScopes
+    $dhcpExcludedScopes | Format-Table
     $ipAddress = $dhcpExcludedScopes.StartRange
 }
 else {
     Write-Host "These are your current DHCP excluded Scopes:`n"
-    $dhcpExcludedScopes
+    $dhcpExcludedScopes | Format-Table
     [system.net.ipaddress] $ipAddress = Read-Host "`nPlease Enter the StartRange of your DHCP Excluded Scope you want to use"
-    $dhcpExcludedScopes = Get-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId | Where-Object {$_.StartRange -eq $ipAddress}
+    $dhcpExcludedScopes = Get-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId | Where-Object { $_.StartRange -eq $ipAddress }
 }
 
 $ip = $ipAddress.GetAddressBytes()
