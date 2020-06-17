@@ -1,16 +1,11 @@
-$servers = Get-ADComputer -Filter { OperatingSystem -like "*windows*server*" } | Select-Object -Property name
-$dhcpScopes = Get-DhcpServerv4Scope
-$dhcpScopesCount = $dhcpScopes | Measure-Object
-$dhcpExcludedScope = Get-DhcpServerv4ExclusionRange
-$dhcpExcludedScopeCount = $dhcpExcludedScope | Measure-Object
 
-
+$boolean = !(Test-Connection -TargetName $ipAddress -Count 1 -Quiet)
 function IsIpAddressUsed {
     # Firewall Rule for allow Ping: netsh advFirewall Firewall add rule name="OSRadar Rule PING IPv4" protocol=icmpv4:8,any dir=in action=allow 
     param (
         [system.net.ipaddress] $ipAddress
     )
-    if (!Test-Connection -ComputerName $ipAddress -Count 3 -Quiet) {
+    if (!(Test-Connection -ComputerName $ipAddress -Count 1 -Quiet)) {
         return $ipAddress
     }
     else {
@@ -18,14 +13,12 @@ function IsIpAddressUsed {
             $ip = $ipAddress.GetAddressBytes()
             $ip[3]++
             $ipAddress = [system.net.ipaddress] "$($ip[0]).$($ip[1]).$($ip[2]).$($ip[3])"
-            if (!Test-Connection -TargetName $ipAddress -Count 3 -Quiet) {
+            if (!(Test-Connection -TargetName $ipAddress -Count 1 -Quiet)) {
                 return $ipAddress
             }
         } 
     }
 }
-
-#IsIpAddressInRange -ipAddress 172.16.1.36 -fromAddress 172.16.1.30 -toAddress 172.16.1.40
 
 function IsIpAddressInRange {
     param(
@@ -45,6 +38,7 @@ function IsIpAddressInRange {
     $from -le $ip -and $ip -le $to
 }
 
+
 function AddDhcpExcludedRange {
     Write-Host "There is currently no IPv4 DHCP excluded range configured`n"
     Write-Host "This is your current DHCP-Range:`n"
@@ -52,19 +46,24 @@ function AddDhcpExcludedRange {
     $continue = Read-Host "`nWould you like to configure an excluded Range now? `n(yes, y to continue or no, n to cancle)"
     if (($continue -eq "y") -or ($continue -eq "yes")) {
         if ($dhcpScopesCount.Count -eq 1) {
-            $dhcpScopeId = $dhcpScopes.dhcpScopeId.IPAddressToString
+            [system.net.ipaddress] $dhcpScopeId = $dhcpScopes.ScopeId.IPAddressToString
         }
         else {
-            $dhcpScopeId = Read-Host "Scope Id"
+            [system.net.ipaddress] $dhcpScopeId = Read-Host "Scope Id"
         }
-        $StartRange = Read-Host "Start IP"
-        $EndRange = Read-Host "End IP"
-        Add-DhcpServerv4ExclusionRange -DhcpScopeId $dhcpScopeId -StartRange $StartRange -EndRange $EndRange
+        [system.net.ipaddress] $StartRange = Read-Host "Start IP"
+        [system.net.ipaddress] $EndRange = Read-Host "End IP"
+        Add-DhcpServerv4ExclusionRange -ScopeId $dhcpScopeId -StartRange $StartRange -EndRange $EndRange
     }
     else {
         exit
     }
 }
+
+$dhcpScopes = Get-DhcpServerv4Scope
+$dhcpScopesCount = $dhcpScopes | Measure-Object
+$dhcpExcludedScope = Get-DhcpServerv4ExclusionRange
+$dhcpExcludedScopeCount = $dhcpExcludedScope | Measure-Object
 
 if ($null -eq $dhcpScopes) {
     Write-Host "No DHCP-Scope configured"
@@ -72,20 +71,24 @@ if ($null -eq $dhcpScopes) {
     exit
 }
 
+Write-Host "This is your current DHCP excluded Scope:`n"
+$dhcpExcludedScope
+
 if ($null -eq $dhcpExcludedScope) {
     AddDhcpExcludedRange
 }
 
+$dhcpExcludedScope = Get-DhcpServerv4ExclusionRange
+$dhcpExcludedScopeCount = $dhcpExcludedScope | Measure-Object
+
 if ($dhcpScopesCount.Count -eq 1) {
-    $dhcpScopeId = $dhcpScopes.dhcpScopeId.IPAddressToString
-    $DnsSuffix = Get-DhcpServerv4OptionValue -ScopeId $dhcpScopeId -OptionId 15
+    [system.net.ipaddress] $dhcpScopeId = $dhcpScopes.ScopeId.IPAddressToString
 }
 else {
-    # Figure out which scope to use... ??? :-(
+    [system.net.ipaddress] $dhcpScopeId = Read-Host "Please Enter the ScopeId of your DHCP Excluded Range you want to use"
 }
 
-Write-Host "This is your current DHCP excluded Scope:`n"
-$dhcpExcludedScope
+$dnsSuffix = Get-DhcpServerv4OptionValue -ScopeId $dhcpScopeId -OptionId 15
 
 if ($dhcpExcludedScopeCount.Count -eq 1) {
     $dhcpExcludedScopeId = $dhcpExcludedScope.ScopeId
@@ -93,21 +96,28 @@ if ($dhcpExcludedScopeCount.Count -eq 1) {
 
 $ipAddress = $dhcpExcludedScope.StartRange
 
-foreach ($server in $servers) {
-    # $ipAddress = IsIpAddressUsed -ipAddress $ipAddress
-    # foreach ($NIC in $NICs) {$NIC.EnableStatic("10.0.0.$(($ipaddress++))", "255.255.255.0")
-    # Firewall Rule for Remote Wmi-Object: netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes
-    $nics = Get-WmiObject win32_networkadapterconfiguration -ComputerName $server.name | Where-Object { $_.DNSDomain -eq $DnsSuffix.Value }
+$ip = $ipAddress.GetAddressBytes()
+$ip[3]--
+$ipAddress = [system.net.ipaddress] "$($ip[0]).$($ip[1]).$($ip[2]).$($ip[3])"
 
+$servers = Get-ADComputer -Filter { OperatingSystem -like "*windows*server*" } | Select-Object -Property name
+foreach ($server in $servers) {
+    $ipAddress = IsIpAddressUsed -ipAddress $ipAddress
+    # Firewall Rule for Remote Wmi-Object: netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes
+    $nics = Get-WmiObject win32_networkadapterconfiguration -ComputerName $server.name | Where-Object { $_.DNSDomain -eq $dnsSuffix.Value }
     foreach ($nic in $nics) {
         $ip = $ipAddress.GetAddressBytes()
         $ip[3]++
         $ipAddress = [system.net.ipaddress] "$($ip[0]).$($ip[1]).$($ip[2]).$($ip[3])"
+        if (!(IsIpAddressInRange -ipAddress $ipAddress -fromAddress $dhcpExcludedScope.StartRange -toAddress $dhcpExcludedScope.EndRange)) {
+            Write-Host "Your DHCP Excluded Range is full"
+            Write-Host "Please extend your DHCP Excluded Range and re-run the script"
+            exit
+        }
         if ($null -ne $nic) {
             $mac = $nic.MACAddress
             Add-DhcpServerv4Reservation -ScopeId $dhcpExcludedScopeId -IPAddress $ipAddress -ClientId $mac.Replace(":", "-") -Description "Reservation for server $($server.name)"
-            Write-Host "New Reservation created:" $server.name $ipAddress
+            Write-Host "`nNew Reservation created:" $server.name $ipAddress
         }
     }
 }
-
