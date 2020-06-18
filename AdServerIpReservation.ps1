@@ -41,7 +41,7 @@ function AddDhcpExcludedRange {
     Write-Host "There is currently no IPv4 DHCP excluded range configured`n"
     Write-Host "This is your current DHCP-Range:`n"
     $dhcpScopes = Get-DhcpServerv4Scope -ScopeId $dhcpScopeId
-    $dhcpScopes
+    $dhcpScopes | Format-Table
     $continue = Read-Host "`nWould you like to configure an excluded Range now? `n(yes, y to continue or no, n to cancle)"
     if (($continue -eq "y") -or ($continue -eq "yes")) {
         [system.net.ipaddress] $StartRange = Read-Host "Start IP"
