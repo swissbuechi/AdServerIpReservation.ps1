@@ -67,7 +67,7 @@ if ($dhcpScopesCount.Count -eq 1) {
     [system.net.ipaddress] $dhcpScopeId = $dhcpScopes.ScopeId.IPAddressToString
 }
 else {
-    $dhcpScopes
+    $dhcpScopes | Format-Table
     [system.net.ipaddress] $dhcpScopeId = Read-Host "`nPlease Enter the ScopeId of your DHCP-Scope you want to use"
 }
 $dnsSuffix = Get-DhcpServerv4OptionValue -ScopeId $dhcpScopeId -OptionId 15
