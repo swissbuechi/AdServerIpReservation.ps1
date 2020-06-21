@@ -114,8 +114,17 @@ foreach ($server in $servers) {
         }
         if ($null -ne $nic) {
             $mac = $nic.MACAddress
-            Add-DhcpServerv4Reservation -ScopeId $DhcpScopeId -IPAddress $ipAddress -ClientId $mac.Replace(":", "-") -Description "Reservation for server $($server.name)"
-            Write-Host "`nNew Reservation created:" $server.name $ipAddress
+            
+            try {
+                Add-DhcpServerv4Reservation -ScopeId $DhcpScopeId -IPAddress $ipAddress -ClientId $mac.Replace(":", "-") -Description "Reservation for server $($server.name)"
+                Write-Host "`nNew Reservation created:" $server.name $ipAddress
+            }
+            catch {
+            
+                $ip = $ipAddress.GetAddressBytes()
+                $ip[3]--
+                $ipAddress = [system.net.ipaddress] "$($ip[0]).$($ip[1]).$($ip[2]).$($ip[3])"
+            }
         }
     }
 }
