@@ -120,7 +120,6 @@ foreach ($server in $servers) {
                 Write-Host "`nNew Reservation created:" $server.name $ipAddress
             }
             catch {
-            
                 $ip = $ipAddress.GetAddressBytes()
                 $ip[3]--
                 $ipAddress = [system.net.ipaddress] "$($ip[0]).$($ip[1]).$($ip[2]).$($ip[3])"
