@@ -1,6 +1,6 @@
 # Features
 
-* Every Server gets an DHCP IP reservation
+* Every server gets an DHCP IP reservation
 * Every IP is in an DHCP excluded range
 * Missing DHCP excluded ranges can be created
 * Every IP gets testet and only used if free
