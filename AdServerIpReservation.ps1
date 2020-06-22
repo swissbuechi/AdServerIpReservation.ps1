@@ -1,3 +1,10 @@
+#  Author:          swissbuechi - https://github.com/swissbuechi
+#  Company:         netider.ch
+#  FileName:        AdServerIpReservation.ps1
+#  Description:     Create DHCP reservations for Windows Servers
+#  Version:         1.0
+#  LastChange:      2020-06-22
+
 
 function IsIpAddressUsed {
     # Firewall Rule for allow Ping: netsh advFirewall Firewall add rule name="OSRadar Rule PING IPv4" protocol=icmpv4:8,any dir=in action=allow 
