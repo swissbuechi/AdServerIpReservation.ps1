@@ -116,7 +116,7 @@ foreach ($server in $servers) {
             $mac = $nic.MACAddress
             
             try {
-                Add-DhcpServerv4Reservation -ScopeId $DhcpScopeId -IPAddress $ipAddress -ClientId $mac.Replace(":", "-") -Description "Reservation for server $($server.name)"
+                Add-DhcpServerv4Reservation -ScopeId $DhcpScopeId -IPAddress $ipAddress -ClientId $mac.Replace(":", "-") -Name $server.name -Description "Reservation for server $($server.name)"
                 Write-Host "`nNew Reservation created:" $server.name $ipAddress
             }
             catch {
